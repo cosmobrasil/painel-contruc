@@ -555,6 +555,26 @@
                 statusEl.className = 'status' + (type ? ` ${type}` : '');
             }
 
+            function getAdminEndpoint() {
+                return `${API_BASE}/api/admin/respostas`;
+            }
+
+            function getFriendlyBackendError(response, data) {
+                if (response.status === 401) {
+                    return 'A senha administrativa não foi validada pelo backend.';
+                }
+
+                if (response.status === 404) {
+                    return 'O backend publicado ainda não possui o endpoint administrativo deste painel.';
+                }
+
+                if (response.status >= 500) {
+                    return data?.error || 'O backend administrativo falhou ao processar a solicitação.';
+                }
+
+                return data?.error || 'Falha ao carregar a lista administrativa.';
+            }
+
             function escapeHtml(value) {
                 return String(value ?? '')
                     .replace(/&/g, '&amp;')
@@ -647,7 +667,7 @@
                 setStatus('Carregando respondentes e relatórios arquivados...');
 
                 try {
-                    const response = await fetch(`${API_BASE}/api/admin/respostas?token=${encodeURIComponent(token)}`, {
+                    const response = await fetch(`${getAdminEndpoint()}?token=${encodeURIComponent(token)}`, {
                         headers: {
                             Accept: 'application/json',
                             'x-admin-token': token
@@ -657,17 +677,19 @@
                     const data = await response.json().catch(() => null);
 
                     if (!response.ok || !data?.success || !Array.isArray(data?.data)) {
-                        throw new Error(data?.error || 'Falha ao carregar a lista administrativa.');
+                        throw new Error(getFriendlyBackendError(response, data));
                     }
 
                     rawRows = data.data;
                     applySearch();
                     setStatus(`Painel carregado com ${rawRows.length} respondente(s).`, 'success');
+                    setGateStatus('');
+                    setLocked(false);
                 } catch (error) {
-                    setStatus(error.message || 'Falha ao carregar a lista administrativa.', 'error');
-                    setToken('');
+                    const message = error.message || 'Falha ao carregar a lista administrativa.';
+                    setStatus(message, 'error');
                     setLocked(true);
-                    setGateStatus('A senha administrativa não foi validada pelo backend.', 'error');
+                    setGateStatus(message, 'error');
                 }
             }
 
@@ -682,7 +704,6 @@
 
                 setGateStatus('Validando acesso...');
                 setToken(token);
-                setLocked(false);
                 await carregar();
             });
 
@@ -704,7 +725,6 @@
             });
 
             if (getToken()) {
-                setLocked(false);
                 carregar();
             } else {
                 setLocked(true);

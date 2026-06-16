@@ -657,7 +657,8 @@
                 `).join('');
             }
 
-            async function carregar() {
+            async function carregar(options = {}) {
+                const { preserveTokenOnError = false } = options;
                 const token = getToken();
                 if (!token) {
                     setLocked(true);
@@ -688,6 +689,9 @@
                 } catch (error) {
                     const message = error.message || 'Falha ao carregar a lista administrativa.';
                     setStatus(message, 'error');
+                    if (!preserveTokenOnError) {
+                        setToken('');
+                    }
                     setLocked(true);
                     setGateStatus(message, 'error');
                 }
@@ -724,11 +728,8 @@
                 setLocked(true);
             });
 
-            if (getToken()) {
-                carregar();
-            } else {
-                setLocked(true);
-            }
+            setToken('');
+            setLocked(true);
         })();
     </script>
 </body>

@@ -513,6 +513,14 @@
         (() => {
             const ACCESS_TOKEN_KEY = 'admin_access_token';
             const API_BASE = window.COSMOBRASIL_API_BASE_URL || '';
+            const FETCH_TIMEOUT_MS = 15000;
+
+            function fetchComTimeout(url, options = {}, timeoutMs = FETCH_TIMEOUT_MS) {
+                const controller = new AbortController();
+                const timer = setTimeout(() => controller.abort(), timeoutMs);
+                return fetch(url, { ...options, signal: controller.signal })
+                    .finally(() => clearTimeout(timer));
+            }
 
             const gateForm = document.getElementById('gateForm');
             const gatePassword = document.getElementById('gatePassword');
@@ -668,7 +676,7 @@
                 setStatus('Carregando respondentes e relatórios arquivados...');
 
                 try {
-                    const response = await fetch(`${getAdminEndpoint()}?token=${encodeURIComponent(token)}`, {
+                    const response = await fetchComTimeout(`${getAdminEndpoint()}?token=${encodeURIComponent(token)}`, {
                         headers: {
                             Accept: 'application/json',
                             'x-admin-token': token
